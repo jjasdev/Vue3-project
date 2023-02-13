@@ -1,3 +1,6 @@
 {
-  "endOfLine": "auto"
+  "endOfLine": "auto",
+  "singleAttributePerLine": false,
+  "printWidth": 80,
+  "bracketSameLine": true
 }
