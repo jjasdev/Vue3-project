@@ -1,35 +1,48 @@
+import { ref, computed } from "vue";
 import api from "@/api/api";
-import axios from "axios";
-import { onMounted, ref } from "vue";
+import { useQuery } from "@tanstack/vue-query";
 import type { Character } from "../interfaces/character";
-
 const characters = ref<Character[]>([]);
-const isLoading = ref<boolean>(true);
 const hasError = ref<boolean>(false);
-const errorMessage = ref<string>("");
+const errorMessage = ref<string | null>(null);
 
-export const useCharacters = () => {
-  onMounted(() => {
-    loadCharacters();
+const getCharacters = async (): Promise<Character[]> => {
+  if (characters.value.length > 0) {
+    return characters.value;
+  }
+  const { data } = await api.get("/character");
+  return data.results;
+};
+
+const loadedCharacters = (data: Character[]) => {
+  hasError.value = false;
+  errorMessage.value = null;
+  characters.value = data;
+};
+
+const useCharacters = () => {
+  const { isLoading } = useQuery(["characters"], getCharacters, {
+    onSuccess(data) {
+      loadedCharacters(data);
+    },
+    // onSuccess: loadedCharacters,
+    // onError(error: AxiosError) {
+    //   characterStore.loadCharactersFailed(`Error: ${error.message}`);
+    // },
   });
 
-  const loadCharacters = async () => {
-    // Llamar una única vez a la api
-    if (characters.value.length > 0) return;
-    isLoading.value = true;
-    try {
-      const { data } = await api.get("/character");
-      characters.value = data.results;
-      isLoading.value = false;
-    } catch (error) {
-      hasError.value = true;
-      isLoading.value = false;
-      if (axios.isAxiosError(error)) {
-        return (errorMessage.value = error.message);
-      }
-      errorMessage.value = JSON.stringify(error);
-    }
-  };
+  return {
+    // Properties
+    characters,
+    hasError,
+    errorMessage,
+    isLoading,
 
-  return { characters, isLoading, hasError, errorMessage };
+    // Getters
+    count: computed(() => characters.value.length),
+
+    // Methods
+  };
 };
+
+export default useCharacters;

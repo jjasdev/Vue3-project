@@ -1,46 +1,32 @@
 <script setup lang="ts">
-import { useRoute } from "vue-router";
-import type { Character } from "../interfaces/character";
-import characterStore from "../../store/characters.store";
-import api from "@/api/api";
-import { useQuery } from "@tanstack/vue-query";
+import { watch, watchEffect } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import useCharacter from "../composables/useCharacter";
 
+const router = useRouter();
 const route = useRoute();
 const { id } = route.params as { id: string };
+const { hasError, errorMessage, character, isLoading } = useCharacter(id);
 
-const getCharacterCacheFirst = async (
-  CharacterId: string
-): Promise<Character> => {
-  if (characterStore.checkIdInStore(CharacterId)) {
-    return characterStore.ids.list[CharacterId];
+watchEffect(() => {
+  if (!isLoading.value && hasError.value) {
+    router.replace("/characters");
   }
-
-  const { data } = await api.get(`/character/${CharacterId}`);
-  return data;
-};
-
-const { data } = useQuery(
-  [`character/${id}`],
-  () => getCharacterCacheFirst(id),
-  {
-    onSuccess(character) {
-      characterStore.loadedCharacter(character);
-    },
-  }
-);
+});
 </script>
 
 <template>
-  <h1 v-if="!data">Loading...</h1>
-  <div v-else>
-    <h1>{{ data.name }}</h1>
+  <h1 v-if="isLoading">Loading...</h1>
+  <h1 v-else-if="hasError">{{ errorMessage }}</h1>
+  <div v-else-if="character">
+    <h1>{{ character.name }}</h1>
     <div class="character-container">
-      <img :src="data.image" :alt="data.name" />>
+      <img :src="character.image" :alt="character.name" />>
       <ul>
-        <li>Sexo: {{ data.gender }}</li>
-        <li>Origen: {{ data.origin.name }}</li>
-        <li>Estado: {{ data.status }}</li>
-        <li>Raza: {{ data.species }}</li>
+        <li>Sexo: {{ character.gender }}</li>
+        <li>Origen: {{ character.origin.name }}</li>
+        <li>Estado: {{ character.status }}</li>
+        <li>Raza: {{ character.species }}</li>
       </ul>
     </div>
   </div>
